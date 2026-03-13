@@ -215,7 +215,7 @@ with st.sidebar:
     st.markdown("### 📊 Edelweiss Factsheet GPT")
     st.markdown("---")
     st.markdown("<div style='color:#00e676;font-size:0.85rem;'>✅ API Connected</div>", unsafe_allow_html=True)
-    load_btn = st.button("🚀 Load Factsheets from Drive", use_container_width=True)
+    load_btn = False  # No button needed - auto loads
     st.markdown("---")
     st.markdown("### 💡 Sample Questions")
     for q in ["Best performing fund in 2024?", "Top holdings across all months?", "Sector allocation trend?", "AUM growth over 2 years?", "Which fund beat its benchmark?", "Equity vs debt allocation?"]:
@@ -241,18 +241,19 @@ if "chunks" not in st.session_state: st.session_state.chunks = None
 if "doc_count" not in st.session_state: st.session_state.doc_count = 0
 if "chunk_count" not in st.session_state: st.session_state.chunk_count = 0
 
-if load_btn:
-    with st.spinner("📚 Loading all factsheets from Google Drive... (2-3 mins first time)"):
+# Auto-load on startup if not already loaded
+if not st.session_state.kb_ready:
+    with st.spinner("📚 Loading 26 months of Edelweiss factsheets... Please wait 2-3 minutes..."):
         index, chunks, doc_count, chunk_count = build_knowledge_base_from_drive(FOLDER_ID)
     if index is None:
-        st.error("❌ Could not load PDFs. Please check the Drive folder is public.")
+        st.error("❌ Could not load PDFs from Google Drive. Please refresh the page.")
     else:
         st.session_state.index = index
         st.session_state.chunks = chunks
         st.session_state.doc_count = doc_count
         st.session_state.chunk_count = chunk_count
         st.session_state.kb_ready = True
-        st.success(f"✅ {doc_count} factsheets loaded! {chunk_count:,} chunks indexed.")
+        st.rerun()
 
 if st.session_state.kb_ready:
     c1, c2, c3, c4 = st.columns(4)
