@@ -208,10 +208,13 @@ def ask_groq(question, context_chunks, api_key):
 # ─────────────────────────────────────────────
 # SIDEBAR
 # ─────────────────────────────────────────────
+# Auto-load API key from Streamlit secrets
+groq_api_key = st.secrets["GROQ_API_KEY"]
+
 with st.sidebar:
-    st.markdown("### ⚙️ Configuration")
+    st.markdown("### 📊 Edelweiss Factsheet GPT")
     st.markdown("---")
-    groq_api_key = st.text_input("🔑 Groq API Key", type="password", placeholder="gsk_...", help="Get free key at console.groq.com")
+    st.markdown("<div style='color:#00e676;font-size:0.85rem;'>✅ API Connected</div>", unsafe_allow_html=True)
     load_btn = st.button("🚀 Load Factsheets from Drive", use_container_width=True)
     st.markdown("---")
     st.markdown("### 💡 Sample Questions")
@@ -239,21 +242,17 @@ if "doc_count" not in st.session_state: st.session_state.doc_count = 0
 if "chunk_count" not in st.session_state: st.session_state.chunk_count = 0
 
 if load_btn:
-    if not groq_api_key:
-        st.error("⚠️ Please enter your Groq API key in the sidebar.")
+    with st.spinner("📚 Loading all factsheets from Google Drive... (2-3 mins first time)"):
+        index, chunks, doc_count, chunk_count = build_knowledge_base_from_drive(FOLDER_ID)
+    if index is None:
+        st.error("❌ Could not load PDFs. Please check the Drive folder is public.")
     else:
-        with st.spinner("📚 Loading all factsheets from Google Drive... (2-3 mins first time)"):
-            index, chunks, doc_count, chunk_count = build_knowledge_base_from_drive(FOLDER_ID)
-        if index is None:
-            st.error("❌ Could not load PDFs. Please check the Drive folder is public.")
-        else:
-            st.session_state.index = index
-            st.session_state.chunks = chunks
-            st.session_state.doc_count = doc_count
-            st.session_state.chunk_count = chunk_count
-            st.session_state.kb_ready = True
-            st.session_state.groq_key = groq_api_key
-            st.success(f"✅ {doc_count} factsheets loaded! {chunk_count:,} chunks indexed.")
+        st.session_state.index = index
+        st.session_state.chunks = chunks
+        st.session_state.doc_count = doc_count
+        st.session_state.chunk_count = chunk_count
+        st.session_state.kb_ready = True
+        st.success(f"✅ {doc_count} factsheets loaded! {chunk_count:,} chunks indexed.")
 
 if st.session_state.kb_ready:
     c1, c2, c3, c4 = st.columns(4)
@@ -299,7 +298,7 @@ if st.session_state.kb_ready:
             embedder = load_embedder()
             chunks = retrieve_chunks(user_input, st.session_state.index, st.session_state.chunks, embedder)
             sources = list(set([c['source'] for c in chunks]))
-            answer = ask_groq(user_input, chunks, st.session_state.groq_key)
+            answer = ask_groq(user_input, chunks, groq_api_key)
         st.session_state.messages.append({"role": "assistant", "content": answer, "sources": sources})
         st.rerun()
     if st.session_state.messages:
